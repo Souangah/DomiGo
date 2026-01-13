@@ -1,0 +1,28 @@
+import { View, Text } from 'react-native'
+import React from 'react'
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import Menu from '../screens/menu';
+import BottomTab from './BottomTab';
+import Connexion from '../screens/connexion';
+import ListeService from '../screens/liste-service';
+import PublierService from '../screens/publier-service';
+
+const Stak = createNativeStackNavigator();
+
+export default function Router() {
+  return (
+    <NavigationContainer>
+        <Stak.Navigator initialRouteName='BottomTab'>
+            <Stak.Screen name='Menu' component={Menu} 
+            options={{ headerShown: false }} />
+            <Stak.Screen name='BottomTab' component={BottomTab} 
+            options={{ headerShown: false }} />
+            <Stak.Screen name='Connexion' component={Connexion} 
+            options={{ headerShown: false }} />
+            <Stak.Screen name='ListeService' component={ListeService} />
+            <Stak.Screen name='PublierService' component={PublierService} />
+        </Stak.Navigator>
+    </NavigationContainer>
+  )
+}
