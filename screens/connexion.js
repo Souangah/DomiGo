@@ -38,7 +38,12 @@ export default function Connexion({navigation}) {
                 // C'est un utilisateur valide (le tableau des résultats)
                 if (result.length > 0 && result[0].telephone) {
                     setUser(result[0]);
+                    if( result[0].role === 'prestataire' ) {     
                     navigation.navigate('BottomTab');
+                    } else if( result[0].role === 'client' )
+                         {
+                        navigation.navigate('BottomClient');
+                    }
                 } else {
                     alert('Téléphone ou mot de passe incorrect');
                 }
@@ -80,6 +85,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#f0f0f0',
+        borderWidth: 1,
+        borderColor: '#ddd',
+        padding: 20,
     },
     title: {
         fontSize: 24,
@@ -87,19 +95,21 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     input: {
-        width: '80%',
+        width: '85%',
         height: 40,
         borderWidth: 1,
         borderColor: '#ccc',
-        borderRadius: 5,
-        marginBottom: 10,
+        borderRadius: 15,
+        marginBottom: 15,
         paddingHorizontal: 10,
     },
     button: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: '#4A6FFF',
         paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 5,
+        paddingHorizontal: 64,
+        borderRadius: 35,
+        marginTop: 50,
+        elevation: 3,
     },
     buttonText: {
         color: '#fff',

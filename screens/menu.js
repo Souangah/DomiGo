@@ -1,56 +1,110 @@
-import { View, Text, ScrollView, Image, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, TextInput, TouchableOpacity, Dimensions } from 'react-native'
+import { View, Text, ScrollView, Image, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, TextInput, TouchableOpacity, Dimensions, Modal } from 'react-native'
 import React, { useState, useEffect } from 'react'
-import { Ionicons } from '@expo/vector-icons'; // Si vous utilisez Expo
-// Sinon, installez react-native-vector-icons et importez depuis 'react-native-vector-icons/Ionicons'
+import { Ionicons } from '@expo/vector-icons';
 
 // Obtenir la largeur de l'écran
 const { width } = Dimensions.get('window');
 
-export default function Menu() {
+export default function Menu({navigation}) {
   const [services, setServices] = useState([]);
+  const [filteredServices, setFilteredServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchText, setSearchText] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState(null); 
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedService, setSelectedService] = useState(null);
 
   useEffect(() => {
-    getService();
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        await Promise.all([getService(), getCategorie()]);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
   }, []);
 
   const getService = async () => {
     try {
-      setLoading(true);
       setError(null);
       
       const response = await fetch('https://epencia.net/app/souangah/domigo/liste-service.php');
-      
       const result = await response.json();
       setServices(result);
+      setFilteredServices(result); // Afficher tous les services au départ
       
     } catch (error) {
       console.error('Erreur lors de la récupération des services:', error);
       setError(error.message);
-    } finally {
-      setLoading(false);
+      setServices([]);
+      setFilteredServices([]);
     }
   };
 
-  // Services les plus populaires (statiques pour l'exemple)
-  const popularServices = [
-    { id: '1', title: 'Plombier', icon: '⚙️' },
-    { id: '2', title: 'Électricien', icon: '⚡' },
-    { id: '3', title: 'Menuisier', icon: '🔨' },
-    { id: '4', title: 'Peintre', icon: '🎨' },
-    { id: '5', title: 'Maçon', icon: '🧱' },
-    { id: '6', title: 'Soudeur', icon: '🔥' },
-    { id: '7', title: 'Couvreur', icon: '🏠' },
-    { id: '8', title: 'Plus', icon: '⋯' },
-  ];
-
-  // Fonction pour générer un prix aléatoire
-  const generatePrice = () => {
-    const prices = ["45€", "40€/jour", "55€/session", "35€/jour", "60€", "50€/heure", "70€"];
-    return prices[Math.floor(Math.random() * prices.length)];
+  const getCategorie = async () => {
+    try {
+      setCategoriesLoading(true);
+      const response = await fetch('https://epencia.net/app/souangah/domigo/liste-categorie-service.php');  
+      const result = await response.json();
+      setCategories(result);
+      
+    } catch (error) {
+      console.error('Erreur lors de la récupération des catégories:', error);
+      setCategories([]);
+    } finally {
+      setCategoriesLoading(false);
+    }
   };
+
+  // Fonction pour filtrer les services par catégorie
+  const filterServicesByCategory = (categoryCode) => {
+    if (selectedCategory === categoryCode) {
+      // Si on clique sur la même catégorie, on désélectionne
+      setSelectedCategory(null);
+      setFilteredServices(services); // Afficher tous les services
+    } else {
+      // Sinon, on filtre par la nouvelle catégorie
+      setSelectedCategory(categoryCode);
+      const filtered = services.filter(service => 
+        service.code_categorie === categoryCode
+      );
+      setFilteredServices(filtered);
+    }
+  };
+
+  // Filtrage automatique des services en fonction du texte de recherche ET de la catégorie
+  useEffect(() => {
+    let filtered = services;
+    
+    // Appliquer le filtre de catégorie si une catégorie est sélectionnée
+    if (selectedCategory) {
+      filtered = filtered.filter(service => 
+        service.code_categorie === selectedCategory
+      );
+    }
+    
+    // Appliquer le filtre de recherche si du texte est saisi
+    if (searchText.trim()) {
+      filtered = filtered.filter(service => {
+        const titre = service.titre || '';
+        const description = service.description || '';
+        const searchLower = searchText.toLowerCase();
+        
+        return titre.toLowerCase().includes(searchLower) ||
+               description.toLowerCase().includes(searchLower);
+      });
+    }
+    
+    setFilteredServices(filtered);
+  }, [searchText, services, selectedCategory]);
 
   // Fonction pour générer des notes aléatoires
   const generateRating = () => {
@@ -60,63 +114,89 @@ export default function Menu() {
     return `${ratings[randomIndex]} ${reviews[randomIndex]}`;
   };
 
-  const renderServiceItem = ({ item }) => (
-    <TouchableOpacity style={styles.serviceCard}>
-      <View style={styles.serviceIconContainer}>
-        <Text style={styles.serviceIcon}>{item.icon}</Text>
-      </View>
-      <Text style={styles.serviceTitle}>{item.title}</Text>
-    </TouchableOpacity>
-  );
-
-  const renderPopularService = ({ item }) => (
-    <TouchableOpacity style={styles.popularServiceCard}>
-      <View style={styles.popularIconContainer}>
-        <Text style={styles.popularIcon}>{item.icon}</Text>
-      </View>
-      <Text style={styles.popularServiceTitle}>{item.title}</Text>
-    </TouchableOpacity>
-  );
+  const renderCategorie = ({ item }) => {
+    const isSelected = selectedCategory === item.code_categorie;
+    
+    return (
+      <TouchableOpacity 
+        style={[
+          styles.categorieName, 
+          isSelected && styles.selectedCategorieName
+        ]}
+        onPress={() => filterServicesByCategory(item.code_categorie)}
+      >
+        <Text style={[
+          styles.categorieText,
+          isSelected && styles.selectedCategorieText
+        ]}>
+          {item.nom_categorie || 'Catégorie'}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   // Rendu d'un service horizontal
-  const renderHorizontalService = ({ item, index }) => {
-    const price = generatePrice();
+  const renderHorizontalService = ({ item }) => {
     const rating = generateRating();
 
     return (
       <TouchableOpacity style={styles.horizontalServiceCard}>
         {/* Image du service */}
+        <View style={styles.imagecontainer}>
         {item.photo64 ? (
           <Image 
             source={{ uri: `data:${item.type_photo || 'image/jpeg'};base64,${item.photo64}` }} 
             style={styles.horizontalServiceImage}
+            resizeMode="cover"
           />
+          
         ) : (
           <View style={styles.horizontalServiceImagePlaceholder}>
-            <Text style={styles.horizontalServiceIcon}>🔧</Text>
+            <Ionicons name="construct" size={32} color="#666" />
           </View>
         )}
 
+        <View style={styles.categorieBadge}>
+          <Text style={styles.categorieBadgeText}>
+            {item.nom_categorie || 'Catégorie'}
+          </Text>
+        </View>
+        </View>
+
         {/* Contenu du service */}
         <View style={styles.horizontalServiceContent}>
-          <Text style={styles.horizontalServiceTitle} numberOfLines={1}>
-            {item.titre || 'Service sans nom'}
+          <Text style={styles.horizontalServiceTitle} numberOfLines={2}>
+            {item.nom_prenom || 'Service sans nom'}
           </Text>
           
-          <Text style={styles.horizontalServicePrice}>{item.prix}</Text>
-          <Text style={styles.horizontalServiceDescription}>{item.description || 'Acune description'}</Text>
+          <Text style={styles.horizontalServiceDescription} numberOfLines={2}>
+            {item.description || 'Aucune description'}
+          </Text>
+
+          <View style={styles.priceContainer}>
+            <Text style={styles.horizontalServicePrice}>
+              {item.prix || '0'} FCFA
+            </Text>
+          </View>
+          
+          
           
           <View style={styles.horizontalRatingContainer}>
-            <Text style={styles.horizontalRatingIcon}>⭐</Text>
+            <Ionicons name="star" size={14} color="#FFC107" />
             <Text style={styles.horizontalRatingText}>{rating}</Text>
           </View>
 
           {/* Boutons d'action */}
           <View style={styles.horizontalActionButtons}>
-            <TouchableOpacity style={styles.viewProfileButtonHorizontal}>
-              <Text style={styles.viewProfileButtonTextHorizontal}>Voir Profil</Text>
+            <TouchableOpacity style={styles.viewProfileButtonHorizontal}
+            onPress={() => {
+              setSelectedService(item)
+              setModalVisible(true)
+            }}
+            >
+              <Text style={styles.viewProfileButtonTextHorizontal}>Voir Detail</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.bookNowButtonHorizontal}>
               <Text style={styles.bookNowButtonTextHorizontal}>Réserver</Text>
             </TouchableOpacity>
@@ -137,35 +217,38 @@ export default function Menu() {
     );
   }
 
-  if (error) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centerContainer}>
-          <Text style={styles.errorText}>Erreur: {error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={getService}>
-            <Text style={styles.retryButtonText}>Réessayer</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Barre de recherche */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
-            <Text style={styles.searchIcon}>🔍</Text>
+            <Ionicons name="search" size={20} color="#666" />
             <TextInput
               style={styles.searchInput}
               placeholder="Rechercher un service..."
               placeholderTextColor="#999"
               value={searchText}
               onChangeText={setSearchText}
+              returnKeyType="search"
             />
+            {searchText.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchText('')}>
+                <Ionicons name="close-circle" size={20} color="#999" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
+
+        {/* Afficher les erreurs si présentes */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>Erreur: {error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={getService}>
+              <Text style={styles.retryButtonText}>Réessayer</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Bannière promotionnelle */}
         <View style={styles.promoBanner}>
@@ -178,55 +261,151 @@ export default function Menu() {
           </View>
           <View style={styles.promoImageContainer}>
             <View style={styles.promoImage}>
-              <Text style={styles.promoImageText}>🏠</Text>
+              <Ionicons name="home" size={40} color="#FFF" />
             </View>
           </View>
         </View>
 
-        {/* Section "Services les Plus Réservés" */}
+        {/* Section "Catégories services" */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Services les Plus Réservés</Text>
-          <TouchableOpacity>
-            <Text style={styles.viewAllText}>Voir tout</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Catégories services</Text>
+          {selectedCategory && (
+            <TouchableOpacity onPress={() => {
+              setSelectedCategory(null);
+              setFilteredServices(services);
+            }}>
+              <Text style={styles.viewAllText}>Tout afficher</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Liste des services populaires */}
-        <FlatList
-          data={popularServices}
-          renderItem={renderPopularService}
-          keyExtractor={(item) => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.popularServicesList}
-        />
-
-        {/* Section "Tous les Services" avec ScrollView horizontal */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Tous les Services</Text>
-          <TouchableOpacity>
-            <Text style={styles.viewAllText}>Voir tout</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* ScrollView horizontal pour tous les services */}
-        {services.length === 0 ? (
+        {/* Liste des catégories */}
+        {categoriesLoading ? (
           <View style={styles.centerContainer}>
-            <Text style={styles.emptyText}>Aucun service disponible</Text>
+            <ActivityIndicator size="small" color="#007AFF" />
+            <Text style={styles.loadingText}>Chargement des catégories...</Text>
+          </View>
+        ) : categories.length === 0 ? (
+          <Text style={styles.emptyText}>Aucune catégorie disponible</Text>
+        ) : (
+          <FlatList
+            data={categories}
+            keyExtractor={(item) => item.code_categorie?.toString() || Math.random().toString()}
+            renderItem={renderCategorie}
+            horizontal={true}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categorieListe}
+          />
+        )}
+
+        {/* Modal pour afficher les détails du service */}
+        <Modal 
+          visible={modalVisible}
+          animationType='slide'
+          transparent={true}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalBackground}>
+            <View style={styles.modalContainer}>
+              
+              {/* Affiche de la photo */}
+              {selectedService?.photo64 ? (
+                <Image
+                  source={{uri: `data:${selectedService.type_photo || 'image/jpeg'};base64,${selectedService.photo64}`}}
+                  style={styles.modalImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.modalImagePlaceholder}>
+                  <Ionicons name="construct" size={40} color="#666" />
+                </View>
+              )}
+              
+              {/* Informations du service */}
+              <Text style={styles.modalTitle} numberOfLines={2}>
+                {selectedService?.titre || 'Titre non disponible'}
+              </Text>
+              
+              <Text style={styles.modalName} numberOfLines={1}>
+                {selectedService?.nom_service || 'Nom non disponible'}
+              </Text>
+              
+              <Text style={styles.modalPrice}>
+                {selectedService?.prix || '0'} FCFA
+              </Text>
+              
+              <Text style={styles.modalDescription} numberOfLines={6}>
+                {selectedService?.description || 'Aucune description disponible'}
+              </Text>
+              
+              {/* Bouton Fermer en bas */}
+              <TouchableOpacity 
+                style={styles.modalCloseButtonBottom}
+                onPress={() => setModalVisible(false)}
+              >
+                <Ionicons name="close-circle" size={20} color="#666" />
+                <Text style={styles.modalCloseButtonText}>Fermer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Indicateur de catégorie sélectionnée */}
+        {selectedCategory && (
+          <View style={styles.selectedCategoryContainer}>
+            <Text style={styles.selectedCategoryText}>
+              Catégorie sélectionnée: {
+                categories.find(cat => cat.code_categorie === selectedCategory)?.nom_categorie || 'Inconnue'
+              }
+            </Text>
+            <TouchableOpacity 
+              style={styles.clearFilterButton}
+              onPress={() => {
+                setSelectedCategory(null);
+                setFilteredServices(services);
+              }}
+            >
+              <Ionicons name="close" size={16} color="#666" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Section "Tous les Services" */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            {selectedCategory ? 'Services de la catégorie' : 'Tous les Services'}
+          </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('PlusService')}>
+            <Text style={styles.viewAllText}>Voir tout</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Liste des services */}
+        {filteredServices.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <Text style={styles.emptyText}>
+              {selectedCategory 
+                ? `Aucun service dans cette catégorie${searchText ? ` pour "${searchText}"` : ''}`
+                : searchText 
+                  ? `Aucun service trouvé pour "${searchText}"`
+                  : 'Aucun service disponible'
+              }
+            </Text>
           </View>
         ) : (
           <View style={styles.horizontalServicesContainer}>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={true}
+            <FlatList
+              data={filteredServices}
+              renderItem={renderHorizontalService}
+              keyExtractor={(item, index) => item.code_service?.toString() || index.toString()}
+              horizontal
+              showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalScrollContent}
-            >
-              {services.map((item, index) => (
-                <View key={item.code_service || index}>
-                  {renderHorizontalService({ item, index })}
-                </View>
-              ))}
-            </ScrollView>
+              snapToAlignment="start"
+              decelerationRate="fast"
+              snapToInterval={220 + 15}
+              
+            />
           </View>
         )}
       </ScrollView>
@@ -240,32 +419,39 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
   },
   centerContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   loadingText: {
     marginTop: 10,
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
+    textAlign: 'center',
+  },
+  errorContainer: {
+    backgroundColor: '#FFEBEE',
+    marginHorizontal: 20,
+    marginTop: 10,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
   },
   errorText: {
-    fontSize: 16,
-    color: '#FF3B30',
+    fontSize: 14,
+    color: '#D32F2F',
     textAlign: 'center',
     marginBottom: 10,
   },
   retryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#D32F2F',
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 10,
+    paddingVertical: 8,
+    borderRadius: 6,
   },
   retryButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
   searchContainer: {
@@ -285,15 +471,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  searchIcon: {
-    fontSize: 18,
-    color: '#666',
-    marginRight: 10,
-  },
   searchInput: {
     flex: 1,
     fontSize: 16,
     color: '#333',
+    marginLeft: 10,
+    padding: 0,
   },
   promoBanner: {
     backgroundColor: '#4A6FFF',
@@ -310,7 +493,7 @@ const styles = StyleSheet.create({
     paddingRight: 10,
   },
   promoTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 5,
@@ -344,9 +527,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  promoImageText: {
-    fontSize: 40,
-  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -364,142 +544,260 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '500',
   },
-  popularServicesList: {
+  categorieListe: {
     paddingHorizontal: 15,
+    paddingVertical: 5,
     paddingBottom: 10,
   },
-  popularServiceCard: {
-    alignItems: 'center',
-    marginHorizontal: 10,
-    width: 80,
-  },
-  popularIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 15,
+  categorieName: {
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginRight: 10,
     backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
+    borderRadius: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  popularIcon: {
-    fontSize: 24,
+  selectedCategorieName: {
+    backgroundColor: '#4A6FFF',
   },
-  popularServiceTitle: {
-    fontSize: 12,
+  categorieText: {
+    fontSize: 14,
     color: '#333',
-    textAlign: 'center',
     fontWeight: '500',
+  },
+  selectedCategorieText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  selectedCategoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E3F2FD',
+    marginHorizontal: 20,
+    marginVertical: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  selectedCategoryText: {
+    fontSize: 14,
+    color: '#1976D2',
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'center',
+  },
+  clearFilterButton: {
+    padding: 5,
   },
   // Styles pour les services horizontaux
   horizontalServicesContainer: {
     marginBottom: 20,
+    height: 350,
   },
   horizontalScrollContent: {
     paddingHorizontal: 15,
-    paddingBottom: 10,
+    paddingBottom: 20,
   },
   horizontalServiceCard: {
-    width: 280,
+    width: 220,
+    height: 320,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 12,
     marginRight: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
     overflow: 'hidden',
   },
   horizontalServiceImage: {
     width: '100%',
-    height: 160,
+    height: 140,
     backgroundColor: '#e0e0e0',
   },
   horizontalServiceImagePlaceholder: {
     width: '100%',
-    height: 160,
+    height: 140,
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  horizontalServiceIcon: {
-    fontSize: 40,
-    color: '#666',
-  },
   horizontalServiceContent: {
-    padding: 15,
+    padding: 12,
   },
   horizontalServiceTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
+    marginBottom: 6,
+    lineHeight: 20,
+  },
+  priceContainer: {
     marginBottom: 8,
   },
   horizontalServicePrice: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#2196F3',
-    marginBottom: 8,
   },
   horizontalServiceDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
-    marginBottom: 12,
+    marginBottom: 10,
+    lineHeight: 18,
   },
   horizontalRatingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
-  },
-  horizontalRatingIcon: {
-    fontSize: 16,
-    marginRight: 5,
+    marginBottom: 12,
   },
   horizontalRatingText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
+    marginLeft: 5,
   },
   horizontalActionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 8,
   },
   viewProfileButtonHorizontal: {
     flex: 1,
     borderWidth: 1,
     borderColor: '#2196F3',
-    borderRadius: 8,
-    paddingVertical: 10,
-    marginRight: 10,
+    borderRadius: 6,
+    paddingVertical: 8,
     alignItems: 'center',
   },
   viewProfileButtonTextHorizontal: {
     color: '#2196F3',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   bookNowButtonHorizontal: {
     flex: 1,
     backgroundColor: '#2196F3',
-    borderRadius: 8,
-    paddingVertical: 10,
+    borderRadius: 6,
+    paddingVertical: 8,
     alignItems: 'center',
   },
   bookNowButtonTextHorizontal: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   emptyText: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
-    paddingVertical: 30,
+    paddingVertical: 20,
     marginHorizontal: 20,
+  },
+  
+  // Styles pour le modal
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    width: '90%',
+    maxWidth: 400,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+ 
+  modalImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  modalImagePlaceholder: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#eee',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: { 
+    fontSize: 22, 
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalName: { 
+    fontSize: 16, 
+    fontWeight: '600', 
+    color: '#555', 
+    textAlign: 'center', 
+    marginBottom: 12,
+  },
+  modalPrice: { 
+    fontSize: 20, 
+    fontWeight: '700', 
+    color: '#4CAF50', 
+    textAlign: 'center', 
+    marginBottom: 16,
+  },
+  modalDescription: { 
+    fontSize: 15, 
+    color: '#666', 
+    textAlign: 'center', 
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  modalCloseButtonBottom: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginTop: 10,
+  },
+  modalCloseButtonText: {
+    color: '#666',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  imagecontainer:{
+    position: 'relative',
+  },
+  categorieBadge:{ 
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  
+  },
+  categorieBadgeText:{
+    backgroundColor: 'rgba(255, 7, 7, 0.6)',
+    color: 'white',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    fontSize: 10,
+    borderRadius: 6,
+    overflow: 'hidden',
   },
 });
