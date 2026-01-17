@@ -83,7 +83,7 @@ export default function BottomTab() {
                 tabBarIcon: ({ color, size, focused }) => (
                   <Ionicons 
                     name={focused ? 'home' : 'home-outline'} 
-                    size={17} 
+                    size={25} 
                     color={color} 
                   />
                 ),
@@ -103,7 +103,7 @@ export default function BottomTab() {
                 tabBarIcon: ({ color, size, focused }) => (
                   <Ionicons 
                     name={focused ? 'briefcase' : 'briefcase-outline'} 
-                    size={17} 
+                    size={25} 
                     color={color} 
                   />
                 ),
@@ -127,8 +127,8 @@ export default function BottomTab() {
                   ]}>
                     <Ionicons 
                       name={focused ? 'add' : 'add-outline'}
-                      size={32}
-                      color={focused ? '#fff' : '#000'}
+                      size={30}
+                      color={focused ? '#fff' : '#fff'}
                     />
                   </View>
                 ),
@@ -144,7 +144,7 @@ export default function BottomTab() {
                 tabBarIcon: ({ color, size, focused }) => (
                   <Ionicons 
                     name={focused ? 'notifications' : 'notifications-outline'} 
-                    size={17} 
+                    size={25} 
                     color={color} 
                   />
                 ),
@@ -160,7 +160,7 @@ export default function BottomTab() {
                 tabBarIcon: ({ color, size, focused }) => (
                   <Ionicons 
                     name={focused ? 'settings' : 'settings-outline'} 
-                    size={17} 
+                    size={25} 
                     color={color} 
                   />
                 ),

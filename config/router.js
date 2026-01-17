@@ -10,6 +10,7 @@ import PublierService from '../screens/publier-service';
 import PlusService from '../screens/plus-service';
 import ServiceUtilisateur from '../screens/service-utilisateur';
 import BottomClient from './BottomClient';
+import Inscription from '../screens/inscription';
 
 const Stak = createNativeStackNavigator();
 
@@ -30,6 +31,7 @@ export default function Router() {
             />
             <Stak.Screen name='ServiceUtilisateur' component={ServiceUtilisateur} />
             <Stak.Screen name='BottomClient' component={BottomClient} options={{ headerShown: false }} />
+            <Stak.Screen name='Inscription' component={Inscription} options={{ headerShown: false }} />
         </Stak.Navigator>
     </NavigationContainer>
   )

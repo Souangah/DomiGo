@@ -252,16 +252,19 @@ export default function Menu({navigation}) {
 
         {/* Bannière promotionnelle */}
         <View style={styles.promoBanner}>
-          <View style={styles.promoContent}>
-            <Text style={styles.promoTitle}>Économisez 25% Aujourd'hui !</Text>
-            <Text style={styles.promoSubtitle}>Remises exclusives sur les services à domicile</Text>
+         <View style={styles.promoContent}>
+            <Text style={styles.promoTitle}>Livraison Rapide & Sécurisée</Text>
+            <Text style={styles.promoSubtitle}>
+              Recevez vos commandes à domicile en un temps record
+            </Text>
             <TouchableOpacity style={styles.bookButton}>
-              <Text style={styles.bookButtonText}>Réserver Maintenant</Text>
+              <Text style={styles.bookButtonText}>Commander maintenant</Text>
             </TouchableOpacity>
           </View>
+
           <View style={styles.promoImageContainer}>
             <View style={styles.promoImage}>
-              <Ionicons name="home" size={40} color="#FFF" />
+              <Ionicons name="bicycle-outline" size={40} color="#FFF" />
             </View>
           </View>
         </View>
