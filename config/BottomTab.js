@@ -6,10 +6,10 @@ import { Ionicons } from '@expo/vector-icons';
 import Menu from '../screens/menu';
 import Parametre from '../screens/parametre';
 import Notification from '../screens/notification';
-import ListeService from '../screens/liste-service';
 import PublierService from '../screens/publier-service';
 import { useNavigation } from '@react-navigation/native';
 import { GlobalContext } from './GlobalUser';
+import CommandeRecu from '../screens/commande-recu';
 
 const Tab = createBottomTabNavigator();
 
@@ -96,8 +96,8 @@ export default function BottomTab() {
 
             {/* Écran ListeService */}
             <Tab.Screen
-              name="ListeService"
-              component={ListeService}
+              name="CommandeRecu"
+              component={CommandeRecu}
               options={{
                 tabBarLabel: 'Mes commandes',
                 tabBarIcon: ({ color, size, focused }) => (

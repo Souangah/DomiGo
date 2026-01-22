@@ -1,11 +1,14 @@
-import { View, Text, ScrollView, Image, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, TextInput, TouchableOpacity, Dimensions, Modal } from 'react-native'
-import React, { useState, useEffect } from 'react'
+import { View, Text, ScrollView, Image, FlatList, StyleSheet, SafeAreaView, ActivityIndicator, TextInput, TouchableOpacity, Dimensions, Modal, Alert } from 'react-native'
+import React, { useState, useEffect, useContext } from 'react'
 import { Ionicons } from '@expo/vector-icons';
+import { GlobalContext } from '../config/GlobalUser';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 
 // Obtenir la largeur de l'écran
 const { width } = Dimensions.get('window');
 
-export default function Menu({navigation}) {
+export default function Menu() {
   const [services, setServices] = useState([]);
   const [filteredServices, setFilteredServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,6 +19,8 @@ export default function Menu({navigation}) {
   const [selectedCategory, setSelectedCategory] = useState(null); 
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
+  const {user, setUser} = useContext(GlobalContext);
+  const navigation = useNavigation();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,7 +44,7 @@ export default function Menu({navigation}) {
       const response = await fetch('https://epencia.net/app/souangah/domigo/liste-service.php');
       const result = await response.json();
       setServices(result);
-      setFilteredServices(result); // Afficher tous les services au départ
+      setFilteredServices(result);
       
     } catch (error) {
       console.error('Erreur lors de la récupération des services:', error);
@@ -64,14 +69,86 @@ export default function Menu({navigation}) {
     }
   };
 
+  // valider la commande
+  const Commander = async (item) => {
+    if (!user || !user.user_id) {
+      Alert.alert(
+        'Erreur', 
+        'veillez vous connecter pour passer une commande.',
+        [
+          { text: 'annuler', style:'cancel'},
+          {text: 'Se connecter', onPress: () => navigation.navigate('Connexion')}
+        ]
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Confirmer la commande',
+      `Voulez-vous commander le service "${item.nom_prenom || 'ce service'} ?\n\nPrix: ${item.prix || '0'} FCFA`,
+      [
+        {
+          text: 'Annuler',
+          style: 'cancel'
+        },
+        {
+          text: 'Confirmer',
+          onPress: async () => {
+            createCommande(item);
+            navigation.navigate('CommandeClient');
+          },
+          
+        }
+        
+      ]
+    );
+  };
+
+  const createCommande = async (item) => {
+    try {
+     
+
+      const formData = new FormData();
+      formData.append('code_service', item.code_service);
+      formData.append('user_id', user.user_id);
+      formData.append('prix', item.prix || 0);
+
+      const response = await fetch('https://epencia.net/app/souangah/domigo/nouvelle-commande.php', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        Alert.alert(
+          'Succès',
+          'Commande passée avec succès!',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Erreur',
+          result.message || 'Erreur lors de la commande',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Erreur création commande:', error);
+      Alert.alert(
+        'Erreur',
+        'Impossible de créer la commande. Vérifiez votre connexion.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   // Fonction pour filtrer les services par catégorie
   const filterServicesByCategory = (categoryCode) => {
     if (selectedCategory === categoryCode) {
-      // Si on clique sur la même catégorie, on désélectionne
       setSelectedCategory(null);
-      setFilteredServices(services); // Afficher tous les services
+      setFilteredServices(services);
     } else {
-      // Sinon, on filtre par la nouvelle catégorie
       setSelectedCategory(categoryCode);
       const filtered = services.filter(service => 
         service.code_categorie === categoryCode
@@ -84,14 +161,12 @@ export default function Menu({navigation}) {
   useEffect(() => {
     let filtered = services;
     
-    // Appliquer le filtre de catégorie si une catégorie est sélectionnée
     if (selectedCategory) {
       filtered = filtered.filter(service => 
         service.code_categorie === selectedCategory
       );
     }
     
-    // Appliquer le filtre de recherche si du texte est saisi
     if (searchText.trim()) {
       filtered = filtered.filter(service => {
         const titre = service.titre || '';
@@ -179,8 +254,6 @@ export default function Menu({navigation}) {
             </Text>
           </View>
           
-          
-          
           <View style={styles.horizontalRatingContainer}>
             <Ionicons name="star" size={14} color="#FFC107" />
             <Text style={styles.horizontalRatingText}>{rating}</Text>
@@ -197,8 +270,11 @@ export default function Menu({navigation}) {
               <Text style={styles.viewProfileButtonTextHorizontal}>Voir Detail</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.bookNowButtonHorizontal}>
-              <Text style={styles.bookNowButtonTextHorizontal}>Réserver</Text>
+            <TouchableOpacity 
+              style={styles.bookNowButtonHorizontal}
+              onPress={() => Commander(item)}
+            >
+              <Text style={styles.bookNowButtonTextHorizontal}>Commander</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -329,10 +405,6 @@ export default function Menu({navigation}) {
                 {selectedService?.titre || 'Titre non disponible'}
               </Text>
               
-              <Text style={styles.modalName} numberOfLines={1}>
-                {selectedService?.nom_service || 'Nom non disponible'}
-              </Text>
-              
               <Text style={styles.modalPrice}>
                 {selectedService?.prix || '0'} FCFA
               </Text>
@@ -341,14 +413,28 @@ export default function Menu({navigation}) {
                 {selectedService?.description || 'Aucune description disponible'}
               </Text>
               
-              {/* Bouton Fermer en bas */}
-              <TouchableOpacity 
-                style={styles.modalCloseButtonBottom}
-                onPress={() => setModalVisible(false)}
-              >
-                <Ionicons name="close-circle" size={20} color="#666" />
-                <Text style={styles.modalCloseButtonText}>Fermer</Text>
-              </TouchableOpacity>
+              {/* Bouton Commander et Fermer */}
+              <View style={styles.modalButtonsContainer}>
+                <TouchableOpacity 
+                  style={styles.modalCommanderButton}
+                  onPress={() => {
+                    setModalVisible(false);
+                    setTimeout(() => {
+                      if (selectedService) Commander(selectedService);
+                    }, 300);
+                  }}
+                >
+                  <Text style={styles.modalCommanderButtonText}>Commander</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.modalCloseButton}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Ionicons name="close-circle" size={20} color="#666" />
+                  <Text style={styles.modalCloseButtonText}>Fermer</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
@@ -407,7 +493,6 @@ export default function Menu({navigation}) {
               snapToAlignment="start"
               decelerationRate="fast"
               snapToInterval={220 + 15}
-              
             />
           </View>
         )}
@@ -748,13 +833,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  modalName: { 
-    fontSize: 16, 
-    fontWeight: '600', 
-    color: '#555', 
-    textAlign: 'center', 
-    marginBottom: 12,
-  },
   modalPrice: { 
     fontSize: 20, 
     fontWeight: '700', 
@@ -769,7 +847,23 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 24,
   },
-  modalCloseButtonBottom: {
+  modalButtonsContainer: {
+    flexDirection: 'column',
+    gap: 10,
+  },
+  modalCommanderButton: {
+    backgroundColor: '#2196F3',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCommanderButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalCloseButton: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -777,7 +871,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 20,
-    marginTop: 10,
   },
   modalCloseButtonText: {
     color: '#666',

@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 
-const Inscription = () => {
+const Inscription = ({navigation}) => {
   // États pour les champs du formulaire
   const [nom_prenom, setNom_Prenom] = useState('');
   const [telephone, setTelephone] = useState('');
@@ -48,13 +48,12 @@ const Inscription = () => {
     });
     const result = await response.json();
 
-    if (result=== 'Inscription effectuée avec succès') {
-      Alert.alert('Succès', result);
-        resetForm();
-      navigation.navigate('Connexion');
-    } else {
-      Alert.alert('Erreur', result.message || 'Échec de l\'inscription. Veuillez réessayer.');
-    }
+        if (result.success) {
+        Alert.alert('Succès', result.message);
+        navigation.navigate('Connexion');
+      } else {
+        Alert.alert('Erreur', result.message);
+      }
 
   };
 

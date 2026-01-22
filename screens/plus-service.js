@@ -6,10 +6,13 @@ import {
   Image,
   TouchableOpacity,
   FlatList,
-  Modal
+  Modal,
+  Alert
 } from 'react-native';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { GlobalContext } from '../config/GlobalUser';
+import { useNavigation } from '@react-navigation/native';
 
 export default function PlusService() {
 
@@ -18,7 +21,8 @@ export default function PlusService() {
   const [filteredServices, setFilteredServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
   const [ModalVisible, setModalVisible] = useState(false);
-
+  const {user, setUser} = useContext(GlobalContext);
+  const navigation = useNavigation();
 
   useEffect(() => {
     getService();
@@ -36,6 +40,73 @@ export default function PlusService() {
       console.log('Erreur chargement services', error);
     }
   };
+
+  // Commander un service
+  const createCommande= async (item) => {
+    
+      try {
+        const formData = new FormData();
+        formData.append('code_service', item.code_service);
+        formData.append('user_id', user.user_id);
+        formData.append('prix', item.prix || 0);
+  
+        const response = await fetch('https://epencia.net/app/souangah/domigo/nouvelle-commande.php', {
+          method: 'POST',
+          body: formData,
+        });
+  
+        const result = await response.json();
+        
+        if (result.success) {
+          Alert.alert(
+            'Succès',
+            'Commande passée avec succès!',
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert(
+            'Erreur',
+            result.message || 'Erreur lors de la commande',
+            [{ text: 'OK' }]
+          );
+        }
+      } catch (error) {
+        console.error('Erreur création commande:', error);
+        Alert.alert(
+          'Erreur',
+          'Impossible de créer la commande. Vérifiez votre connexion.',
+          [{ text: 'OK' }]
+        );
+      }
+    };
+
+    const Commander = async (item) =>{
+         if(!user || !user.user_id) {
+        Alert.alert('erreur','Veuillez vous connecter pour commander un service.',
+          [
+            { text:'Annuler', style:'cancel'},
+            { text: 'Connexion', onPress: () => navigation.navigate('Connexion')}
+          ]
+
+        );
+        return;
+    }
+
+       Alert.alert(
+          'Confirmer la commande',
+          `Voulez-vous commander le service "${item.nom_prenom || 'ce service'} ?\n\nPrix: ${item.prix || '0'} FCFA`,
+          [
+            {
+              text: 'Annuler',
+              style: 'cancel'
+            },
+            {
+              text: 'Confirmer',
+              onPress: () => createCommande(item)
+            }
+          ]
+        );
+    };
 
 
   // Filtrer les services en fonction du texte de recherche
@@ -91,9 +162,9 @@ export default function PlusService() {
           
           <TouchableOpacity 
             style={styles.reserverButton}
-            onPress={() => handleReserver(item)}
+            onPress={() => Commander(item)}
           >
-            <Text style={styles.reserverButtonText}>Réserver</Text>
+            <Text style={styles.reserverButtonText}>Commander</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -279,7 +350,7 @@ const styles = StyleSheet.create({
   },
   detailButtonText: {
     color: '#555',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '500',
   },
   reserverButton: {
@@ -293,7 +364,7 @@ const styles = StyleSheet.create({
   },
   reserverButtonText: {
     color: '#fff',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
   },
 
