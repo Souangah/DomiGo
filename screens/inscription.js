@@ -1,32 +1,16 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 
 const Inscription = ({navigation}) => {
-  // États pour les champs du formulaire
   const [nom_prenom, setNom_Prenom] = useState('');
   const [telephone, setTelephone] = useState('');
   const [mdp, setMdp] = useState('');
   const [role, setRole] = useState('client');
   const [ville, setVille] = useState('');
-  
-  // États pour la visibilité du mot de passe
-  const [showPassword, setShowPassword] = useState(false);
 
   const Valider = async () => {
-    // Validation des champs
     if (!nom_prenom.trim()  || !telephone.trim() || !mdp.trim() || !ville.trim()) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires');
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
       return;
     }
 
@@ -42,262 +26,161 @@ const Inscription = ({navigation}) => {
     formData.append('role', role);
     formData.append('ville', ville);
 
-    const response = await fetch('https://epencia.net/app/souangah/domigo/inscription.php',{
+    try {
+      const response = await fetch('https://epencia.net/app/souangah/domigo/inscription.php', {
         method: 'POST',
         body: formData,
-    });
-    const result = await response.json();
+      });
+      const result = await response.json();
 
-        if (result.success) {
-        Alert.alert('Succès', result.message);
-        navigation.navigate('Connexion');
+      if (result.success) {
+        Alert.alert('Succès', result.message, [
+          { text: 'OK', onPress: () => navigation.navigate('Connexion') }
+        ]);
       } else {
         Alert.alert('Erreur', result.message);
       }
-
-  };
-
-  const resetForm = () => {
-    setNom_Prenom('');
-    setTelephone('');
-    setMdp('');
-    setRole('client');
-    setVille('');
+    } catch (error) {
+      Alert.alert('Erreur', 'Problème de connexion');
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Inscription</Text>
-            <Text style={styles.subtitle}>Créez votre compte</Text>
-          </View>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      {/* En-tête */}
+      <View style={styles.header}>
+        <Text style={styles.title}>DomiGo</Text>
+        <Text style={styles.subtitle}>Créez votre compte</Text>
+      </View>
 
-          <View style={styles.form}>
-            {/* Nom */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Nom & Prenoms *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Entrez votre nom"
-                value={nom_prenom}
-                onChangeText={setNom_Prenom}
-                autoCapitalize="words"
-              />
-            </View>
+      {/* Formulaire */}
+      <View style={styles.form}>
+        <TextInput
+          style={styles.input}
+          placeholder="Nom & Prénoms"
+          value={nom_prenom}
+          onChangeText={setNom_Prenom}
+        />
 
-            {/* Téléphone */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Téléphone *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Entrez votre numéro"
-                value={telephone}
-                onChangeText={setTelephone}
-                keyboardType="phone-pad"
-              />
-            </View>
+        <TextInput
+          style={styles.input}
+          placeholder="Numéro de téléphone"
+          value={telephone}
+          onChangeText={setTelephone}
+          keyboardType="phone-pad"
+        />
 
-            {/* Mot de passe */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Mot de passe *</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="Créez un mot de passe"
-                  value={mdp}
-                  onChangeText={setMdp}
-                  secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Text style={styles.eyeButtonText}>
-                    {showPassword ? 'Masquer' : 'Afficher'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.passwordHint}>Minimum 6 caractères</Text>
-            </View>
+        <TextInput
+          style={styles.input}
+          placeholder="Mot de passe (min. 6 caractères)"
+          value={mdp}
+          onChangeText={setMdp}
+          secureTextEntry
+        />
 
-            {/* Rôle (Client ou Prestataire) */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Vous êtes *</Text>
-              <View style={styles.roleContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.roleButton,
-                    role === 'client' && styles.roleButtonSelected,
-                  ]}
-                  onPress={() => setRole('client')}
-                >
-                  <Text
-                    style={[
-                      styles.roleText,
-                      role === 'client' && styles.roleTextSelected,
-                    ]}
-                  >
-                    Client
-                  </Text>
-                </TouchableOpacity>
+        {/* Choix du rôle */}
+        <View style={styles.roleContainer}>
+          <TouchableOpacity
+            style={[styles.roleButton, role === 'client' && styles.roleButtonSelected]}
+            onPress={() => setRole('client')}
+          >
+            <Text style={[styles.roleText, role === 'client' && styles.roleTextSelected]}>
+              Client
+            </Text>
+          </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[
-                    styles.roleButton,
-                    role === 'prestataire' && styles.roleButtonSelected,
-                  ]}
-                  onPress={() => setRole('prestataire')}
-                >
-                  <Text
-                    style={[
-                      styles.roleText,
-                      role === 'prestataire' && styles.roleTextSelected,
-                    ]}
-                  >
-                    Prestataire
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+          <TouchableOpacity
+            style={[styles.roleButton, role === 'prestataire' && styles.roleButtonSelected]}
+            onPress={() => setRole('prestataire')}
+          >
+            <Text style={[styles.roleText, role === 'prestataire' && styles.roleTextSelected]}>
+              Prestataire
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-            {/* Ville/Commune */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Ville/Commune *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Entrez votre ville ou commune"
-                value={ville}
-                onChangeText={setVille}
-                autoCapitalize="words"
-              />
-            </View>
+        <TextInput
+          style={styles.input}
+          placeholder="Ville/Commune"
+          value={ville}
+          onChangeText={setVille}
+        />
 
-            {/* Bouton d'inscription */}
-            <TouchableOpacity style={styles.submitButton} onPress={Valider}>
-              <Text style={styles.submitButtonText}>S'inscrire</Text>
-            </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={Valider}>
+          <Text style={styles.buttonText}>S'inscrire</Text>
+        </TouchableOpacity>
+      </View>
 
-            {/* Informations légales */}
-            <View style={styles.legalTextContainer}>
-              <Text style={styles.legalText}>
-                En vous inscrivant, vous acceptez nos conditions d'utilisation et notre politique de confidentialité.
-              </Text>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      {/* Lien vers connexion */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Déjà un compte ? </Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Connexion')}>
+          <Text style={styles.footerLink}>Se connecter</Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  keyboardView: {
-    flex: 1,
+    backgroundColor: '#F8FFF8', // Fond vert très clair
+    paddingHorizontal: 24,
+    justifyContent: 'center',
   },
   header: {
-    padding: 20,
-    paddingTop: 40,
-    backgroundColor: '#fff',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    alignItems: 'center',
+    marginBottom: 40,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#2E7D32', // Vert foncé
+    letterSpacing: -1,
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 5,
-    textAlign: 'center',
+    fontSize: 18,
+    color: '#4CAF50', // Vert moyen
+    fontWeight: '400',
   },
   form: {
-    padding: 20,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 5,
+    width: '100%',
   },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 15,
+    width: '100%',
+    height: 56,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#C8E6C9', // Bordure vert pâle
+    borderRadius: 12,
+    paddingHorizontal: 20,
     fontSize: 16,
-    color: '#333',
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  passwordInput: {
-    flex: 1,
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-    fontSize: 16,
-    color: '#333',
-  },
-  eyeButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-  },
-  eyeButtonText: {
-    color: '#2196F3',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  passwordHint: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 5,
-    marginLeft: 5,
+    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    color: '#2E7D32', // Texte vert foncé
   },
   roleContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    marginBottom: 20,
+    gap: 10,
   },
   roleButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f8f8',
-    padding: 15,
-    borderRadius: 10,
-    marginHorizontal: 5,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#C8E6C9',
   },
   roleButtonSelected: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: '#2E7D32', // Vert foncé
+    borderColor: '#2E7D32',
   },
   roleText: {
     fontSize: 16,
@@ -305,30 +188,40 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   roleTextSelected: {
-    color: '#fff',
+    color: '#FFFFFF',
   },
-  submitButton: {
-    backgroundColor: '#2196F3',
-    alignItems: 'center',
+  button: {
+    width: '100%',
+    height: 56,
+    backgroundColor: '#2E7D32', // Vert foncé
+    borderRadius: 12,
     justifyContent: 'center',
-    padding: 18,
-    borderRadius: 10,
-    marginTop: 20,
+    alignItems: 'center',
+    marginTop: 10,
+    shadowColor: '#2E7D32',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
-  legalTextContainer: {
-    marginTop: 20,
-    padding: 10,
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 30,
   },
-  legalText: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 16,
+  footerText: {
+    fontSize: 15,
+    color: '#7A8C7A', // Vert grisâtre
+  },
+  footerLink: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#388E3C', // Vert légèrement plus foncé
   },
 });
 
